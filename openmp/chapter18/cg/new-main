@@ -1,0 +1,31 @@
+main (int argc, char *argv[])
+{
+   double **a;                /* Solving Ax = b for x */
+   double *astorage;          /* Holds elements of A */
+   double *b;                 /* Constant vector */
+   double *x;                 /* Solution vector */
+   int     p;                 /* MPI Processes */
+   int     id;                /* Process rank */
+   int     m;                 /* Rows in A */
+   int     n;                 /* Columns in A */
+   int     n1;                /* Elements in b */
+
+   /* Initialize a and b so that solution is x[i] = i */
+
+   MPI_Init (&argc, &argv);
+   MPI_Comm_size (MPI_COMM_WORLD, &p);
+   MPI_Comm_rank (MPI_COMM_WORLD, &id);
+   read_row_striped_matrix (argv[1], (void *) &a, (void *) &astorage,
+      MPI_DOUBLE, &m, &n, MPI_COMM_WORLD);
+   read_replicated_vector (argv[2], (void **) &b,
+      MPI_DOUBLE, &n1, MPI_COMM_WORLD);
+   if ((m != n) || (n != n1)) {
+      if (!id)
+         printf ("Incompatible dimensions (%d x %d) x (%d)\n", m, n, n1);
+   } else {
+      x = (double *) malloc (n * sizeof(double));
+      cg (p, id, a, b, x, n);
+      print_replicated_vector (x, MPI_DOUBLE, n, MPI_COMM_WORLD);
+   }
+   MPI_Finalize();
+}
